@@ -21,7 +21,7 @@ describe "An upload object" do
   it "should sign many parts" do
     response = @upload.sign_batch(    object_name: "example_object",
                                     content_lengths: "1000000-1000000-1000000",
-                                          upload_id: "a83jrhfs94jcj3c3" ) 
+                                          upload_id: "a83jrhfs94jcj3c3" )
 
     response.should be_an_instance_of(Array)
     response.first[:authorization].should match(/AWS/)
@@ -30,7 +30,7 @@ describe "An upload object" do
   it "should sign a single part" do
     response = @upload.sign_part(   object_name: "example_object",
                                    content_length: "1000000",
-                                        upload_id: "a83jrhfs94jcj3c3" ) 
+                                        upload_id: "a83jrhfs94jcj3c3" )
 
     response.should be_an_instance_of(Hash)
     response[:authorization].should match(/AWS/)
@@ -41,7 +41,7 @@ describe "An upload object" do
                                    content_length: "1000000",
                                             parts: [{partNum: 1, ETag: "jf93nda3Sf8FSh"}],
                                      content_type: "application/xml",
-                                        upload_id: "a83jrhfs94jcj3c3" ) 
+                                        upload_id: "a83jrhfs94jcj3c3" )
 
     response[:error].should eql("Upload does not exist")
   end

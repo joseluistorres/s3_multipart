@@ -3,6 +3,7 @@
 # require 'active_record'
 require 'xmlsimple'
 require 'uuid'
+require 'aws-sdk'
 
 module S3Multipart
 

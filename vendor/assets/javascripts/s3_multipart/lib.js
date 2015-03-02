@@ -104,7 +104,7 @@ function S3MP(options) {
         // Notify the client that the upload has succeeded when we
         // get confirmation from the server
         if (obj.location) {
-          S3MP.onComplete(uploadObj);
+          S3MP.onComplete(uploadObj, obj.location);
         }
       });
 
@@ -310,7 +310,8 @@ S3MP.prototype.cancel = function(key) {
   i = _.indexOf(this.uploadList, uploadObj);
 
   this.uploadList.splice(i,i+1);
-  this.onCancel();
+  this.handler.clearProgressTimer(key);
+  this.onCancel(key);
 };
 
 // pause a given file upload
@@ -423,7 +424,7 @@ function Upload(file, o, key) {
   return new Upload();
 }
 
-// Upload part constructor
+// Upload part constructor 
 function UploadPart(blob, key, upload) {
   var part, xhr;
 
@@ -449,7 +450,7 @@ function UploadPart(blob, key, upload) {
 
 };
 
-UploadPart.prototype.activate = function() {
+UploadPart.prototype.activate = function() { 
   this.xhr.open('PUT', '//'+this.upload.bucket+'.s3.amazonaws.com/'+this.upload.object_name+'?partNumber='+this.num+'&uploadId='+this.upload.upload_id, true);
   this.xhr.setRequestHeader('x-amz-date', this.date);
   this.xhr.setRequestHeader('Authorization', this.auth);

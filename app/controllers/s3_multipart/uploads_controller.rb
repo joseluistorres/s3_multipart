@@ -10,6 +10,7 @@ module S3Multipart
         response = {error: e.message}
       rescue => e
         logger.error "EXC: #{e.message}"
+        logger.error e.backtrace
         response = { error: t("s3_multipart.errors.create") }
       ensure
         render :json => response

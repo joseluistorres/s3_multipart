@@ -1,11 +1,11 @@
 module S3Multipart
 
-  # Collection of methods to be mixed in to the Upload class.  
+  # Collection of methods to be mixed in to the Upload class.
   # Handle all communication with Amazon S3 servers
   module TransferHelpers
 
     def initiate(options)
-      url = "/#{unique_name(options)}?uploads"
+      url = "/#{Config.instance.s3_path}#{unique_name(options)}?uploads"
 
       headers = {content_type: options[:content_type]}
       headers.merge!(options[:headers]) if options.key?(:headers)
@@ -15,7 +15,10 @@ module S3Multipart
                                                              headers: options[:headers]
 
       response = Http.post url, headers: headers
-      parsed_response_body = XmlSimple.xml_in(response.body)  
+
+      parsed_response_body = XmlSimple.xml_in(response.body)
+
+      raise 'Access denied' if parsed_response_body["Code"]=='AccessDenied'
 
       { "key"  => parsed_response_body["Key"][0],
         "upload_id"   => parsed_response_body["UploadId"][0],
@@ -47,10 +50,11 @@ module S3Multipart
       headers[:authorization], headers[:date] = sign_request verb: 'POST', url: url, content_type: options[:content_type]
 
       response = Http.post url, {headers: headers, body: body}
-      parsed_response_body = XmlSimple.xml_in(response.body)  
+      parsed_response_body = XmlSimple.xml_in(response.body)
 
       begin
-        return { location: parsed_response_body["Location"][0] }
+        url_location = ServiceS3Reading.new(Config.instance.bucket_name).get_url(parsed_response_body["Key"][0])
+        return { location: url_location }
       rescue NoMethodError
         return { error: "Upload does not exist"} if parsed_response_body["Message"].first.match("The specified upload does not exist. The upload ID may be invalid, or the upload may have been aborted or completed.")
       end
@@ -74,6 +78,29 @@ module S3Multipart
       end
 
       URI.escape(url)
+    end
+
+    class ServiceS3Reading
+      attr_accessor :url_str, :s3, :bucket_name
+
+      def initialize bucket_name
+        @bucket_name = bucket_name
+        s3
+      end
+
+      def s3
+        @s3 ||= AWS::S3.new
+      end
+
+      def bucket
+        @s3.buckets[@bucket_name]
+      end
+
+      def get_url url_str
+        return '' if url_str.nil? || !url_str
+        s3_obj = bucket.objects[url_str]
+        s3_obj.url_for(:read, :expires => 60*60).to_s
+      end
     end
 
     private
@@ -111,7 +138,7 @@ module S3Multipart
 
       def format_part_list_in_xml(options)
         hash = Hash["Part", ""];
-        hash["Part"] = options[:parts].map do |part| 
+        hash["Part"] = options[:parts].map do |part|
           { "PartNumber" => part[:partNum], "ETag" => part[:ETag] }
         end
         hash["Part"].sort_by! {|obj| obj["PartNumber"]}
